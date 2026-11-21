@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "invite_code" varchar(32) NOT NULL;
