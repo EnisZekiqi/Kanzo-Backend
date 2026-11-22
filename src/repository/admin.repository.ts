@@ -1,8 +1,9 @@
 import { db } from "../db";
-import { companyInviteLinks, companyMembers } from "../db/company";
-import { eq,and } from "drizzle-orm";
+import { companies, companyInviteLinks, companyMembers } from "../db/company";
+import { eq,and, or, exists, sql } from "drizzle-orm";
 import { users } from "../db/schema";
 import { projectMembers, projects } from "../db/projects";
+import { from } from "node:stream/iter";
 export class AdminRepository {
     static async getOwner(userId:string){
        const result = await db
@@ -115,7 +116,7 @@ export class AdminRepository {
             memberFirstName:users.firstName,
             memberLastName:users.lastName,
             memberEmail:users.email,
-            joinedAt:projectMembers.joinedAt
+            joinedAt:projectMembers.joinedAt,
         }).from(companyMembers)
         .leftJoin(projects,
             eq(projects.companyId,companyMembers.companyId)
@@ -130,8 +131,50 @@ export class AdminRepository {
         ))
         return result
     }
+    static async getMemberProjects(userId:string){
+        const result = await db.select({
+            companyId:companyMembers.companyId,
+            userId:companyMembers.userId,
+            role:companyMembers.role,
+            status:companyMembers.status,
+
+            projectName:projects.name,
+            projectKey:projects.key,
+            projectDescription:projects.description,
+            projectStatus:projects.status
+        }).from(companyMembers)
+        .leftJoin(projects,
+            eq(projects.companyId,companyMembers.companyId)
+        ).where(and(
+        eq(companyMembers.userId, userId),
+        or(
+            eq(companyMembers.role, "MEMBER"),
+            eq(companyMembers.role, "ADMIN")
+        ),
+        eq(companyMembers.status, "ACTIVE")
+        ))
+        return result
+    }
     static async createProject(name:string,description:string,inviteCode:string,key:string,companyId:string,createdBy:string){
-     const result = await db.insert(projects).values({
+     const result = await db.transaction(async (tx) => {
+        await tx
+            .select()
+            .from(companies)
+            .where(eq(companies.id, companyId))
+            .for("update");
+
+        const [{ count }] = await tx
+            .select({ count: sql<number>`count(*)` })
+            .from(projects)
+            .where(and(
+            eq(projects.companyId, companyId),
+            eq(projects.status, "ACTIVE")
+            ));
+
+        if (Number(count) >= 10) {
+            throw new Error("Maximum active project limit reached");
+        }
+          const inserted = await tx.insert(projects).values({
         companyId,
         name,
         description,
@@ -140,8 +183,92 @@ export class AdminRepository {
         createdBy,
         status:'ACTIVE',
      }).returning()
-     return result[0] ?? null
+      return inserted[0] ?? null
+     })
+      return result
     }
+    static async archiveProject(userId:string,projectId:string){
+        return await db.transaction(async(tx)=>{
+        const ownerCompany = await tx.select()
+
+        .from(companyMembers)
+        .where(and(
+            eq(companyMembers.userId,userId),
+            eq(companyMembers.role,'OWNER')
+        )).limit(1)
+
+        const owner = ownerCompany[0]
+         if (!owner) {
+      throw new Error("Active owner membership not found");
+    }
+        const archivedProjects = await tx
+            .select()
+            .from(projects)
+            .where(and(
+            eq(projects.companyId, owner.companyId),
+            eq(projects.status, "ARCHIVED")
+            ));
+
+        if (archivedProjects.length >= 10) {
+            throw new Error("Maximum archived project limit reached");
+        }
+         const updatedRows = await tx
+        .update(projects)
+        .set({
+            status: "ARCHIVED",
+            updatedAt: new Date(),
+        })
+        .where(and(
+            eq(projects.id, projectId),
+            eq(projects.companyId, owner.companyId),
+            eq(projects.status, "ACTIVE")
+        ))
+        .returning();
+         return updatedRows[0] ?? null      
+        })
+    }
+    
+    static async activeProject(userId:string,projectId:string){
+        return await db.transaction(async(tx)=>{
+        const ownerCompany = await tx.select()
+
+        .from(companyMembers)
+        .where(and(
+            eq(companyMembers.userId,userId),
+            eq(companyMembers.role,'OWNER')
+        )).limit(1)
+
+        const owner = ownerCompany[0]
+         if (!owner) {
+      throw new Error("Active owner membership not found");
+    }
+        const activeProjects = await tx
+            .select()
+            .from(projects)
+            .where(and(
+            eq(projects.companyId, owner.companyId),
+            eq(projects.status, "ACTIVE")
+            ));
+
+        if (activeProjects.length >= 10) {
+            throw new Error("Maximum active project limit reached");
+        }
+         const updatedRows = await tx
+        .update(projects)
+        .set({
+            status: "ACTIVE",
+            updatedAt: new Date(),
+        })
+        .where(and(
+            eq(projects.id, projectId),
+            eq(projects.companyId, owner.companyId),
+            eq(projects.status, "ARCHIVED")
+        ))
+        .returning();
+         return updatedRows[0] ?? null      
+        })
+    }
+    
     static async joinProject(userId:string,inviteCode:string){
        await db.transaction(async (tx) => {
         const project = await tx

@@ -147,6 +147,10 @@ export class AdminService {
 
         return [...projects.values()]
     }
+    static async getMemberProjects(userId:string){
+        const member = await AdminRepository.getMemberProjects(userId)
+       return member
+    }
     static async createProject(userId:string,name:string,description:string,inviteCode:string,key:string){
         const owner = await AdminRepository.getOwner(userId)
         if (!owner) {
@@ -156,6 +160,22 @@ export class AdminService {
         const companyId= owner.companyId
         const create = await AdminRepository.createProject(name,description,inviteCode,key,companyId,createdBy)
         return create 
+    }
+    static async archiveProject(userId:string,projectId:string){
+        const updateProject = await AdminRepository.archiveProject(userId,projectId)
+        if (!updateProject) {
+            throw new Error("Project not found or access denied");
+            
+        }
+        return updateProject
+    }
+    static async activeProject(userId:string,projectId:string){
+        const updateProject = await AdminRepository.activeProject(userId,projectId)
+        if (!updateProject) {
+            throw new Error("Project not found or access denied");
+            
+        }
+        return updateProject
     }
     static async joinProject(userId:string,inviteCode:string){
         const user = await AdminRepository.getUser(userId)

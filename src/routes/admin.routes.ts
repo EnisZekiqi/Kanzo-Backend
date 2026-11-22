@@ -29,11 +29,12 @@ export const verifyAccess = (
     });
   }
 }
-
+///invitation link routes 
 adminRouter.get('/invitation-link',verifyAccess,AdminController.getLink),
 adminRouter.patch('/approve-invitation',verifyAccess,AdminController.approveAccess)
 adminRouter.patch('/reject-invitation',verifyAccess,AdminController.rejectAccess)
 
+//Projects routes
 adminRouter.get('/company/projects',verifyAccess,AdminController.getProjects)
 adminRouter.post('/company/projects/create',verifyAccess,(req: Request, res: Response, next: NextFunction) => {
     const result = createProjectSchema.safeParse(req.body);
@@ -45,4 +46,8 @@ adminRouter.post('/company/projects/create',verifyAccess,(req: Request, res: Res
     req.body = result.data;
     next()},AdminController.createProject)
 
+adminRouter.patch('/company/projects/archive',verifyAccess,AdminController.archiveProjects)    
+adminRouter.patch('/company/projects/active',verifyAccess,AdminController.activeProject)    
+
+adminRouter.get('/company/projects/member',verifyAccess,AdminController.getMemberProjects)
 adminRouter.post('/company/projects/join-projects',verifyAccess,AdminController.joinProject)

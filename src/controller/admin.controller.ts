@@ -64,6 +64,19 @@ export class AdminController {
          res.status(500).json({ error: 'Internal server error' })
     }
    }
+   static async getMemberProjects(req:Request,res:Response){
+    try {
+         const userId = req.user?.id
+        if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        }
+        const result = await AdminService.getMemberProjects(userId)
+        return res.status(200).json(result)
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+   }
    static async createProject(req:Request,res:Response){
     try {
         const userId = req.user?.id
@@ -88,6 +101,50 @@ export class AdminController {
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' })
     }
+   }
+   static async archiveProjects(req:Request,res:Response){
+    try {
+        const userId = req.user?.id
+        const {projectId}= req.body
+        if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        }
+         if (!projectId) {
+        res.status(401).json({ error: "projectid to archive is missing." });
+        return;
+        }
+        const result = await AdminService.archiveProject(userId,projectId)
+        return res.status(201).json(result)
+    } catch (error) {
+        console.error("archiveProject failed:", error);
+
+        return res.status(500).json({
+            error: error instanceof Error ? error.message : "Internal server error",
+        });
+        }
+   }
+   static async activeProject(req:Request,res:Response){
+    try {
+        const userId = req.user?.id
+        const {projectId}= req.body
+        if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        }
+         if (!projectId) {
+        res.status(401).json({ error: "projectid to archive is missing." });
+        return;
+        }
+        const result = await AdminService.activeProject(userId,projectId)
+        return res.status(201).json(result)
+    } catch (error) {
+        console.error("archiveProject failed:", error);
+
+        return res.status(500).json({
+            error: error instanceof Error ? error.message : "Internal server error",
+        });
+        }
    }
    static async joinProject(req:Request,res:Response){
     try {
