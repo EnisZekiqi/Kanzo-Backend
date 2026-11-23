@@ -1,7 +1,7 @@
 import { Router,Request, Response,NextFunction } from "express";
 import jwt from "jsonwebtoken"
 import { AdminController } from "../controller/admin.controller";
-import { createProjectSchema, editProjectSchema, projectSchema } from "../schema/companySchema";
+import { createProjectSchema, editProjectSchema } from "../schema/companySchema";
 
 export const adminRouter = Router()
 

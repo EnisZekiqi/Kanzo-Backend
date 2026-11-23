@@ -98,8 +98,16 @@ export class CompanyRepository {
         role: companyMembers.role,
         logoUrl:companies.logoUrl,
         status: companyMembers.status,
+
+        firstName:users.firstName,
+        lastName:users.lastName,
+        email:users.email,
+        emailVerifiedAt:users.emailVerifiedAt,
+        createdAt:users.createdAt
+
     }).from(companyMembers)
     .innerJoin(companies, eq(companies.id, companyMembers.companyId))
+    .innerJoin(users, eq(users.id,companyMembers.userId))
     .where(and(
         eq(companyMembers.userId, userId),
         eq(companyMembers.status, "ACTIVE")
