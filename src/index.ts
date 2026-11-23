@@ -7,6 +7,7 @@ import { usersRouter } from './routes/users.route';
 import cookieParser from "cookie-parser";
 import cron from "node-cron";
 import {UsersRepository} from './repository/users.repository'
+import {AdminRepository} from './repository/admin.repository'
 import { companyRouter } from './routes/company.route';
 import { adminRouter } from './routes/admin.routes';
 
@@ -23,12 +24,15 @@ app.use(cors({
 }));
 /////
 cron.schedule("0 * * * *", async () => {
-  console.log("[Worker] Starting expired OTP cleanup...");
+  console.log("[Worker] Starting scheduled cleanup...");
   try {
     await UsersRepository.deleteExpiredVerificationTokens();
     console.log("[Worker] Expired OTP tokens cleaned up successfully.");
+
+    const deletedProjects = await AdminRepository.deletePermanentProject();
+    console.log(`[Worker] Permanently deleted ${deletedProjects.rowCount ?? 0} projects.`);
   } catch (error) {
-    console.error("[Worker] Failed to clean up expired OTP tokens:", error);
+    console.error("[Worker] Scheduled cleanup failed:", error);
   }
 });
 ///Routes the Users will use

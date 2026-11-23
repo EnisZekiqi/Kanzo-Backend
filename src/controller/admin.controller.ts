@@ -124,6 +124,26 @@ export class AdminController {
         });
         }
    }
+   static async editProject(req:Request,res:Response){
+    try {
+         const userId = req.user?.id
+        const {projectId,name,key,description,inviteCode}= req.body
+        if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        }
+        if (!projectId) {
+        res.status(400).json({ error: "Project ID is required." });
+        return;
+        }
+        const result = await AdminService.editProject(userId,projectId,name,key,description,inviteCode)
+        return res.status(201).json(result)
+    } catch (error) {
+        return res.status(500).json({
+            error: error instanceof Error ? error.message : "Internal server error",
+        });
+    }
+   }
    static async activeProject(req:Request,res:Response){
     try {
         const userId = req.user?.id
@@ -145,6 +165,46 @@ export class AdminController {
             error: error instanceof Error ? error.message : "Internal server error",
         });
         }
+   }
+   static async deleteProject(req:Request,res:Response){
+    try {
+        const userId = req.user?.id
+        const {projectId}= req.body
+         if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        }
+         if (!projectId) {
+        res.status(401).json({ error: "projectid to archive is missing." });
+        return;
+        }
+        const result = await AdminService.deleteProject(userId,projectId)
+        return res.status(202).json(result)
+    } catch (error) {
+       return res.status(500).json({
+            error: error instanceof Error ? error.message : "Internal server error",
+        }); 
+    }
+   }
+   static async reArchive(req:Request,res:Response){
+    try {
+        const userId = req.user?.id
+        const {projectId}= req.body
+         if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        }
+         if (!projectId) {
+        res.status(401).json({ error: "projectid to archive is missing." });
+        return;
+        }
+        const result = await AdminService.reArchive(userId,projectId)
+        return res.status(201).json(result)
+    } catch (error) {
+         return res.status(500).json({
+            error: error instanceof Error ? error.message : "Internal server error",
+        });
+    }
    }
    static async joinProject(req:Request,res:Response){
     try {

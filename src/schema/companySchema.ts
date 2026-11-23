@@ -31,3 +31,9 @@ export const createProjectSchema = z.object({
   inviteCode: z.string().min(1).max(32),
   key: z.string().min(1).max(10),
 });
+
+// `projectId` identifies the row to update; it is not part of the
+// create-project payload, so it must be added explicitly to the edit schema.
+export const editProjectSchema = createProjectSchema.partial().extend({
+  projectId: z.uuid("Project ID must be a valid UUID"),
+});

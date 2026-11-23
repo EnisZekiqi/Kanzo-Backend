@@ -1,7 +1,7 @@
 import { Router,Request, Response,NextFunction } from "express";
 import jwt from "jsonwebtoken"
 import { AdminController } from "../controller/admin.controller";
-import { createProjectSchema, projectSchema } from "../schema/companySchema";
+import { createProjectSchema, editProjectSchema, projectSchema } from "../schema/companySchema";
 
 export const adminRouter = Router()
 
@@ -48,6 +48,20 @@ adminRouter.post('/company/projects/create',verifyAccess,(req: Request, res: Res
 
 adminRouter.patch('/company/projects/archive',verifyAccess,AdminController.archiveProjects)    
 adminRouter.patch('/company/projects/active',verifyAccess,AdminController.activeProject)    
+adminRouter.patch('/company/projects/delete',verifyAccess,AdminController.deleteProject)
+adminRouter.patch('/company/projects/rearchive',verifyAccess,AdminController.reArchive)
+adminRouter.patch('/company/projects/update',verifyAccess,(req: Request, res: Response, next: NextFunction) => {
+    const body = req.body?.payload && typeof req.body.payload === "object"
+      ? { ...req.body.payload, projectId: req.body.projectId }
+      : req.body;
+    const result = editProjectSchema.safeParse(body);
+  
+    if (!result.success) {
+      return res.status(400).json({ errors: result.error.issues });
+    }
+  
+    req.body = result.data;
+    next()},AdminController.editProject)
 
 adminRouter.get('/company/projects/member',verifyAccess,AdminController.getMemberProjects)
 adminRouter.post('/company/projects/join-projects',verifyAccess,AdminController.joinProject)

@@ -13,7 +13,7 @@ import { users } from "./schema"
 
 export const projectStatusEnum = pgEnum(
   "project_status",
-  ["ACTIVE", "ARCHIVED"]
+  ["ACTIVE", "ARCHIVED","PENDING_DELETION"]
 );
 
 export const projects = pgTable(
@@ -52,6 +52,10 @@ export const projects = pgTable(
     updatedAt: timestamp("updated_at", {
       withTimezone: true,
     }).defaultNow().notNull(),
+    
+    deletionScheduledAt: timestamp("deletion_at", {
+      withTimezone: true,
+    })
   },
   (table) => [
     uniqueIndex("projects_company_key_unique").on(

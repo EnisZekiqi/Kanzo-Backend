@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { companies, companyInviteLinks, companyMembers } from "../db/company";
-import { eq,and, or, exists, sql } from "drizzle-orm";
+import { eq,and, or, exists, sql, lte } from "drizzle-orm";
 import { users } from "../db/schema";
 import { projectMembers, projects } from "../db/projects";
 import { from } from "node:stream/iter";
@@ -111,6 +111,7 @@ export class AdminRepository {
             createdBy:projects.createdBy,
             key:projects.key,
             inviteCode:projects.inviteCode,
+            deletionAt:projects.deletionScheduledAt,
 
             memberUserId:projectMembers.userId,
             memberFirstName:users.firstName,
@@ -268,7 +269,108 @@ export class AdminRepository {
          return updatedRows[0] ?? null      
         })
     }
-    
+    static async deleteProject(userId:string,projectId:string){
+        return await db.transaction(async(tx)=>{
+           const ownerCompany = await tx.select()
+
+        .from(companyMembers)
+        .where(and(
+            eq(companyMembers.userId,userId),
+            eq(companyMembers.role,'OWNER')
+        )).limit(1)
+
+        const owner = ownerCompany[0]
+         if (!owner) {
+      throw new Error("Active owner membership not found");
+    }
+       
+         const deletedRows = await tx
+        .update(projects)
+        .set({
+            status: "PENDING_DELETION",
+            updatedAt: new Date(),
+            deletionScheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        })
+        .where(and(
+            eq(projects.id, projectId),
+            eq(projects.companyId, owner.companyId),
+            eq(projects.status, "ARCHIVED")
+        ))
+        .returning();
+         return deletedRows[0] ?? null      
+        })
+       
+    }
+    static async reArchive(userId:string,projectId:string){
+         return await db.transaction(async(tx)=>{
+           const ownerCompany = await tx.select()
+
+        .from(companyMembers)
+        .where(and(
+            eq(companyMembers.userId,userId),
+            eq(companyMembers.role,'OWNER')
+        )).limit(1)
+
+        const owner = ownerCompany[0]
+         if (!owner) {
+      throw new Error("Active owner membership not found");
+    }
+       
+         const reArchiveRows = await tx
+        .update(projects)
+        .set({
+            status: "ARCHIVED",
+            updatedAt: new Date(),
+            deletionScheduledAt: null
+        })
+        .where(and(
+            eq(projects.id, projectId),
+            eq(projects.companyId, owner.companyId),
+            eq(projects.status, "PENDING_DELETION")
+        ))
+        .returning();
+         return reArchiveRows[0] ?? null      
+        })
+    }
+    static async deletePermanentProject(){
+        const deletedTime = new Date()
+        const result = await db.delete(projects)
+        .where(and(
+            lte(projects.deletionScheduledAt,deletedTime),
+            eq(projects.status,'PENDING_DELETION')
+        ))
+        return result
+    }
+    static async editProject(userId:string,projectId:string,name:string,key:string,description:string,inviteCode:string){
+        return await db.transaction(async (tx)=>{
+            const ownerCompany = await tx.select()
+            .from(companyMembers).
+            where(
+                and(
+                eq(companyMembers.userId,userId),
+                eq(companyMembers.status,'ACTIVE'),
+                eq(companyMembers.role,'OWNER')
+            )).limit(1)
+
+            const owner = ownerCompany[0]
+            if (!owner) {
+                throw new Error("Owner was not found to proceed ");
+            }
+            const editedProject = await tx.update(projects).set({
+                name:name,
+                key:key,
+                description:description,
+                inviteCode:inviteCode,
+                updatedAt:new Date()
+            }).where(and(
+                eq(projects.id,projectId),
+                eq(projects.companyId,owner.companyId),
+                eq(projects.status,'ACTIVE')
+            )).returning()
+           return editedProject[0] ?? null
+        })
+    }
+
     static async joinProject(userId:string,inviteCode:string){
        await db.transaction(async (tx) => {
         const project = await tx

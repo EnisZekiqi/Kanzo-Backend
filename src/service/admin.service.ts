@@ -99,6 +99,7 @@ export class AdminService {
             createdBy: string;
             key: string;
             inviteCode:string;
+            deletionAt:string;
             members: Array<{
                 userId: string;
                 firstName: string | null;
@@ -128,6 +129,7 @@ export class AdminService {
                     createdBy: row.createdBy,
                     key: row.key,
                     inviteCode: row.inviteCode,
+                    deletionAt:row.deletionAt,
                     members: [],
                 }
                 projects.set(row.projectId, newProject)
@@ -161,6 +163,14 @@ export class AdminService {
         const create = await AdminRepository.createProject(name,description,inviteCode,key,companyId,createdBy)
         return create 
     }
+    static async editProject(userId:string,projectId:string,name:string,key:string,description:string,inviteCode:string){
+        const editProject = await AdminRepository.editProject(userId,projectId,name,key,description,inviteCode)
+        if (!editProject) {
+            throw new Error("Project could not be edited");
+            
+        }
+        return editProject
+    }
     static async archiveProject(userId:string,projectId:string){
         const updateProject = await AdminRepository.archiveProject(userId,projectId)
         if (!updateProject) {
@@ -176,6 +186,22 @@ export class AdminService {
             
         }
         return updateProject
+    }
+    static async deleteProject(userId:string,projectId:string){
+        const deletedProject = await AdminRepository.deleteProject(userId,projectId)
+        if (!deletedProject) {
+            throw new Error("Project not found or access denied");
+            
+        }
+        return deletedProject
+    }
+    static async reArchive(userId:string,projectId:string){
+        const reArchive = await AdminRepository.reArchive(userId,projectId)
+        if (!reArchive) {
+            throw new Error("Project not found or access denied");
+            
+        }
+        return reArchive
     }
     static async joinProject(userId:string,inviteCode:string){
         const user = await AdminRepository.getUser(userId)
