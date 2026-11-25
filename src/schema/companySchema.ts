@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { passwordSchema } from "./loginSchema";
 
 export const createCompanySchema = z.object({
   name: z.string()
@@ -37,3 +38,37 @@ export const createProjectSchema = z.object({
 export const editProjectSchema = createProjectSchema.partial().extend({
   projectId: z.uuid("Project ID must be a valid UUID"),
 });
+
+export const editUserSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  currentPassword: z.string().optional(),
+  newPassword: passwordSchema.optional(),
+}).superRefine((data, ctx) => {
+  if (data.newPassword && !data.currentPassword) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["currentPassword"],
+      message: "Current password is required when changing password",
+    });
+  }
+
+  if (Object.keys(data).length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      message: "At least one setting must be supplied",
+    });
+  }
+});
+
+export const editCompanySchmea = z.object({
+   slug: z.string()
+    .min(1, "Slug is required")
+    .max(150, "Slug must be 150 characters or less")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
+  domain:z.string().max(255).optional(),
+  description:z.string().optional(),
+   logoUrl: z.string()
+    .url("Must be a valid URL")
+    .optional() 
+})

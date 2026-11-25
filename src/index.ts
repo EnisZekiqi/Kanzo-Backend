@@ -10,6 +10,8 @@ import {UsersRepository} from './repository/users.repository'
 import {AdminRepository} from './repository/admin.repository'
 import { companyRouter } from './routes/company.route';
 import { adminRouter } from './routes/admin.routes';
+import { settingsRouter } from './routes/settings.routes';
+import { tasksRouter } from './routes/tasks.routes';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5555;
@@ -40,6 +42,8 @@ cron.schedule("0 * * * *", async () => {
 app.use('/api/auth',usersRouter);
 app.use('/api/company',companyRouter)
 app.use('/api/admin',adminRouter)
+app.use('/api/settings/',settingsRouter)
+app.use('/api/tasks/',tasksRouter)
 ///Routes the Users will use
 
 //// 404 if the user accesses a route that does not exist
