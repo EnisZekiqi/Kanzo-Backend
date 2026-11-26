@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { companies, companyInviteLinks, companyMembers } from "../db/company";
-import { eq,and, or, exists, sql, lte } from "drizzle-orm";
+import { eq,and, or, exists, sql, lte, inArray } from "drizzle-orm";
 import { users } from "../db/schema";
 import { projectMembers, projects } from "../db/projects";
 import { from } from "node:stream/iter";
@@ -127,32 +127,38 @@ export class AdminRepository {
             eq(users.id,projectMembers.userId)
         ).where(and(
             eq(companyMembers.userId,userId),
-            eq(companyMembers.role,"OWNER"),
+            inArray(companyMembers.role,["OWNER","ADMIN"]),
             eq(companyMembers.status,"ACTIVE")
         ))
         return result
     }
     static async getMemberProjects(userId:string){
         const result = await db.select({
-            companyId:companyMembers.companyId,
-            userId:companyMembers.userId,
+            company:companyMembers.companyId,
             role:companyMembers.role,
             status:companyMembers.status,
-
+            
+            companyId:projects.companyId,
             projectName:projects.name,
-            projectKey:projects.key,
             projectDescription:projects.description,
-            projectStatus:projects.status
+            projectStatus:projects.status,
+            
+            projectId:projectMembers.projectId,
+            joinedAt:projectMembers.joinedAt
+
         }).from(companyMembers)
         .leftJoin(projects,
             eq(projects.companyId,companyMembers.companyId)
+        ).leftJoin(projectMembers,
+            eq(projectMembers.projectId,projects.id)
         ).where(and(
         eq(companyMembers.userId, userId),
         or(
             eq(companyMembers.role, "MEMBER"),
-            eq(companyMembers.role, "ADMIN")
+            eq(companyMembers.role, "ADMIN"),
         ),
-        eq(companyMembers.status, "ACTIVE")
+        eq(companyMembers.status, "ACTIVE"),
+         eq(projectMembers.userId,userId)
         ))
         return result
     }

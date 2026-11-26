@@ -98,11 +98,14 @@ export class TaskService {
                 email: string;
             };
             tasks:Array<{
+                taskId:string,
                 taskTitle:string,
                 taskDescription:string,
                 taskStatus:string,
                 taskPriority:string,
-                taskAssigned:string
+                taskAssigned:string,
+                taskDueDate:string,
+                taskPosition:string
             }>
         }>();
 
@@ -129,15 +132,22 @@ export class TaskService {
             
             if (row.taskTitle) {
                 project.tasks.push({
+                    taskId:row.taskId,
                     taskTitle: row.taskTitle,
                     taskDescription: row.taskDescription,
                     taskStatus: row.taskStatus,
                     taskPriority: row.taskPriority,
                     taskAssigned: row.taskAssigned,
+                    taskDueDate:row.taskDueDate,
+                    taskPosition:row.taskPosition
                 });
             }
         }
 
         return Array.from(projectMap.values());
+    }
+    static async changeStatus(userId:string,status:string,projectId:string,taskId:string){
+        const result = await TaskRepository.changeStatus(userId,status,projectId,taskId)
+        return result
     }
 }

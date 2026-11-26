@@ -21,4 +21,4 @@ if (!result.success) {
 
 tasksRouter.get('/admin/projects/active',verifyAccess,TasksController.getProjects)
 tasksRouter.get('/member/projects/active',verifyAccess,TasksController.getProjectsMember)
-
+tasksRouter.patch('/member/projects/change-status',verifyAccess,TasksController.changeStatus)

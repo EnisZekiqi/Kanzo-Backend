@@ -52,4 +52,24 @@ export class TasksController {
         })   
         }
     }
+    static async changeStatus(req:Request,res:Response){
+        try {
+         const userId = req.user?.id
+         const {status,projectId,taskId}=req.body
+        if (!userId) {
+        res.status(401).json({ error: "Verification token is missing." });
+        return;
+        } 
+        if (!status || !projectId || !taskId) {
+        res.status(400).json({ error: "status, projectId and taskId are required." });
+        return;
+        }
+        const result = await TaskService.changeStatus(userId,status,projectId,taskId)
+         return res.status(200).json(result)  
+        } catch (error) {
+             return res.status(500).json({
+            error: error instanceof Error ? error.message : "Internal server error",
+        })
+        }
+    }
 }

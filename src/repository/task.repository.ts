@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, lt, lte, ne, notExists, sql } from "drizzle-orm";
 import { db } from "../db";
 import { companyMembers } from "../db/company";
 import { projectMembers, projects } from "../db/projects";
@@ -101,7 +101,9 @@ export class TaskRepository {
             taskDescription:tasks.description,
             taskStatus:tasks.status,
             taskPriority:tasks.priority,
-            taskAssigned:tasks.assigneeId
+            taskAssigned:tasks.assigneeId,
+            taskDueDate:tasks.dueDate,
+            taskPosition:tasks.position
         })
         .from(projects)
         .innerJoin(
@@ -130,4 +132,83 @@ export class TaskRepository {
         );
         return result
     }
+    static async changeStatus(userId:string,status:string,projectId:string,taskId:string){
+        return db.transaction(async(tx)=>{
+            const user = await tx.select({
+                companyId:companyMembers.companyId,
+                role:companyMembers.role,
+                status:companyMembers.status,
+            }).from(companyMembers)
+            .innerJoin(projects, eq(projects.companyId, companyMembers.companyId))
+            .where(
+                and(
+                    eq(companyMembers.userId,userId),
+                    eq(companyMembers.role,'MEMBER'),
+                    eq(companyMembers.status,'ACTIVE'),
+                    eq(projects.id,projectId),
+                    eq(projects.status,'ACTIVE')
+                )
+            )
+            const member = user[0]
+            if (!member) {
+                throw new Error("This user does not exist in the company and cannot change task");
+                
+            }
+            const [changeStatus] = await tx.update(tasks).set({
+                status
+            }).where(
+                and(
+                    eq(tasks.id,taskId),
+                    eq(tasks.projectId,projectId),
+                    eq(tasks.assigneeId,userId)
+                )
+            ).returning()
+
+            if (!changeStatus) {
+                throw new Error("The task was not found in this project or is not assigned to this user");
+            }
+
+            return changeStatus
+        })
+    }
+    static async deleteDone(){
+        const now = new Date()
+        const today = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0"),
+        ].join("-")
+        const result = await db.delete(tasks).
+        where(and(
+            eq(tasks.status,'DONE'),
+            lte(tasks.dueDate,today)
+        ))
+        return result
+    }
+    static async strikeMember(){
+        const now = new Date()
+        const today = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0"),
+        ].join("-")
+        const result = await db.update(tasks).set({
+            position:sql<number>`GREATEST(0, CURRENT_DATE - ${tasks.dueDate})`
+        }).where(and(
+            inArray(tasks.status,['TODO','IN_PROGRESS']),
+            lt(tasks.dueDate,today)
+        )).returning();
+
+        return result
+    }
+    static async deleteTasks() {
+    return await db.delete(tasks).where(
+        notExists(
+            db
+                .select({ id: projects.id })
+                .from(projects)
+                .where(eq(projects.id, tasks.projectId))
+        )
+    );
+}
 }
