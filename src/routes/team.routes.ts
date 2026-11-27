@@ -8,3 +8,5 @@ export const teamRouter = Router()
 
 teamRouter.get('/company',verifyAccess,TeamController.getTeam)
 teamRouter.patch('/company/role',verifyAccess,TeamController.changeRole)
+teamRouter.get('/company/dashboard/member',verifyAccess,TeamController.getMemberDashboard)
+teamRouter.get('/company/dashboard/admin',verifyAccess,TeamController.getAdminDashboard)

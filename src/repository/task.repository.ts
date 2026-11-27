@@ -155,7 +155,8 @@ export class TaskRepository {
                 
             }
             const [changeStatus] = await tx.update(tasks).set({
-                status
+                status,
+                updatedAt: new Date()
             }).where(
                 and(
                     eq(tasks.id,taskId),
